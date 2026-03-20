@@ -50,22 +50,23 @@ This is not just an API call — it's an agent with:
 ### Key Components
 ```
 /app
-  /page.tsx                 # Main conversation interface
+  /page.tsx                 # Main conversation interface (orchestrator)
   /layout.tsx               # App shell
   /api
     /chat/route.ts          # Claude API endpoint
 /components
+  /ScenarioPicker.tsx       # Pre-session scenario selection
   /ConversationView.tsx     # Displays conversation history
-  /VoiceInput.tsx           # Microphone button + speech recognition
+  /VoiceInput.tsx           # Microphone button + speech recognition + text fallback
   /VoiceOutput.tsx          # TTS playback controls
   /CorrectionCard.tsx       # Shows corrections after each turn
   /SessionSummary.tsx       # End-of-session feedback
 /lib
-  /claude.ts                # Claude API wrapper
+  /claude.ts                # Claude API wrapper (server-side only)
   /speechRecognition.ts     # Web Speech API wrapper
   /textToSpeech.ts          # Browser TTS wrapper
-  /conversationAgent.ts     # Agent state + logic
-  /errorAnalyzer.ts         # Categorizes Spanish mistakes
+  /conversationAgent.ts     # Session state reducer + helpers
+  /errorAnalyzer.ts         # Parses Claude corrections + categorizes mistakes
 /types
   /conversation.ts          # TypeScript types
 ```
@@ -75,20 +76,22 @@ This is not just an API call — it's an agent with:
 ## MVP Scope (Week 1)
 
 ### In Scope ✅
-- [ ] Voice input via Web Speech API (Spanish locale: 'es-MX')
-- [ ] Send transcript to Claude, receive Spanish response
-- [ ] Claude responds in Spanish, adapts to intermediate level
-- [ ] Voice output via browser SpeechSynthesis
-- [ ] End-of-turn corrections displayed (not spoken)
-- [ ] Session summary when user clicks "End Session"
-- [ ] Single mode: casual conversation
-- [ ] Responsive design (mobile-friendly for on-the-go practice)
+- [x] Voice input via Web Speech API (Spanish locale: 'es-MX')
+- [x] Send transcript to Claude, receive Spanish response
+- [x] Claude responds in Spanish, adapts to intermediate level
+- [x] Voice output via browser SpeechSynthesis
+- [x] End-of-turn corrections displayed (not spoken)
+- [x] Session summary when user clicks "End Session"
+- [x] Scenario selection (6 conversation scenarios)
+- [x] Edit-before-send (review/fix transcript before submitting)
+- [x] Text input fallback for non-Chrome browsers
+- [x] Deployed to Vercel (accessible from any device)
+- [ ] Responsive design polish (works but not optimized)
 
 ### Out of Scope ❌ (V2+)
 - User accounts / authentication
 - Progress tracking across sessions
-- Multiple conversation modes (scenarios, debates, lessons)
-- Pronunciation scoring
+- Pronunciation scoring (Whisper API)
 - Custom voice (ElevenLabs)
 - Spaced repetition for mistakes
 - Payment / monetization
@@ -117,6 +120,7 @@ CORRECTION RULES:
   - You said: "[incorrect phrase]"
     Better: "[corrected phrase]"
     Why: [brief explanation in English]
+    Category: [one of: gender, ser_estar, verb_conjugation, subjunctive, preposition, word_order, false_friend, vocabulary]
 - Only correct 1-3 significant errors per turn (prioritize communication-breaking mistakes)
 - If the user made no significant errors, say "✓ ¡Muy bien! No hay correcciones."
 
@@ -140,7 +144,7 @@ You will receive the conversation history. Use it to:
 ```typescript
 const recognition = new webkitSpeechRecognition();
 recognition.lang = 'es-MX';        // Mexican Spanish
-recognition.continuous = false;    // Stop after user pauses
+recognition.continuous = true;     // User clicks mic to stop
 recognition.interimResults = true; // Show partial results
 ```
 
@@ -253,8 +257,8 @@ ANTHROPIC_API_KEY=your_key_here
 ## Future Roadmap (V2+)
 
 1. **Week 2-3**: User accounts + session history (Supabase)
-2. **Week 4**: Multiple conversation modes (scenarios, topics)
-3. **Week 5**: Pronunciation feedback (Whisper API comparison)
+2. **Week 4**: More conversation scenarios + custom topics
+3. **Week 5**: Pronunciation feedback (Whisper API — evaluate spoken speech, not transcription)
 4. **Week 6**: Spaced repetition for persistent mistakes
 5. **Week 7**: Mobile app (React Native or PWA)
 6. **Week 8**: Monetization (free tier + paid unlimited)
@@ -265,8 +269,11 @@ ANTHROPIC_API_KEY=your_key_here
 
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
-| Voice vs Text | Voice-first | Text is a crutch; speaking is the bottleneck |
+| Voice vs Text | Voice-first with text fallback | Voice is primary but text fallback needed for Safari/non-Chrome |
 | Corrections timing | After user finishes | Interrupting kills flow and confidence |
 | Starting complexity | Intermediate only | Beginners have Duolingo; advanced have tutors |
 | Spanish dialect | Mexican (es-MX) | Largest Spanish-speaking population, neutral accent |
-| V1 state management | React only | No auth = no need for backend yet |
+| V1 state management | React useReducer | No auth = no need for backend yet |
+| Error categorization | Claude-provided | Keyword matching was inaccurate; Claude understands linguistic context |
+| Mic mode | Continuous + edit-before-send | Auto-stop cut users off; continuous lets them speak freely, then review |
+| Hosting | Vercel | HTTPS required for Web Speech API on mobile; free tier sufficient |
