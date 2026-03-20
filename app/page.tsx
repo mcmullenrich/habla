@@ -143,13 +143,13 @@ export default function Home() {
               <div className="mt-3">
                 <VoiceInput
                   onTranscript={handleTranscript}
-                  onInterim={(transcript) =>
-                    dispatch({ type: 'SET_INTERIM_TRANSCRIPT', transcript })
+                  onStatusChange={(status) =>
+                    dispatch({ type: 'SET_INTERIM_TRANSCRIPT', transcript: status })
                   }
-                  isListening={state.isListening}
-                  onListeningChange={(listening) =>
+                  isRecording={state.isListening}
+                  onRecordingChange={(recording) =>
                     dispatch({
-                      type: listening ? 'START_LISTENING' : 'STOP_LISTENING',
+                      type: recording ? 'START_LISTENING' : 'STOP_LISTENING',
                     })
                   }
                   disabled={state.isLoading || state.isSpeaking}
